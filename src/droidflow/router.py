@@ -1,6 +1,6 @@
 import logging
-from domain import DomainAgent
-from model import History, State, RequestAndReply
+from .domain import DomainAgent
+from .model import History, State, RequestAndReply
 
 class RouterAgent:
     def __init__(self, llm, agents: list[DomainAgent], history_enabled: bool = False, debug: bool = False):

@@ -1,6 +1,6 @@
 import logging
 
-from domain import ToolFunction
+from .domain import ToolFunction
 
 SYSTEM_PROMPT = """
         You are a reasoning AI agent designed to answer financial questions by calling functions (tools) when necessary. 

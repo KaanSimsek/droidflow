@@ -2,7 +2,7 @@ import dataclasses
 import logging
 from typing import Dict, Callable, Optional, List
 
-from model import State
+from .model import State
 
 @dataclasses.dataclass
 class ToolFunction:
