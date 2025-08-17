@@ -1,6 +1,6 @@
 def _default_planner_prompt():
     return """
-        You are a planner agent. Your goal is to break down the user's task into minimal, essential steps.
+        You are a planner droidflow. Your goal is to break down the user's task into minimal, essential steps.
         Respond with numbered steps or return `MISSING_INFO: [field]` if critical data is missing.
                 """.strip()
 

@@ -1,12 +1,21 @@
+import dataclasses
 import logging
 from typing import Dict, Callable, Optional, List
 
+from droidflow.model import State
+
+@dataclasses.dataclass
+class ToolFunction:
+    name: str
+    callable: Callable
+    state_enabled: bool
 
 class DomainAgent(object):
-    def __init__(self, llm, tool_functions: Dict[str, Callable], mode: bool, debug: bool = False):
+    def __init__(self, llm, tool_functions: list[ToolFunction], name: str, mode: bool, debug: bool = False):
         self.llm = llm
         self.tool_functions = tool_functions
         self.mode = mode
+        self.name = name
 
         self.debug = debug
 
@@ -17,10 +26,23 @@ class DomainAgent(object):
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG if debug else logging.INFO)
 
-    def execute(self, query: str):
+    def execute(self, query: str, state: State):
         if self.mode:
             sub_plans = self._plan(query)
-            self.llm.execute()
+            if sub_plans is None:
+                return self.execute_query(query, state)
+            else:
+                chat_history = []
+                for sub_plan in sub_plans:
+                    response, state = self.execute_query(sub_plan, state, chat_history)
+                    chat_history.append(
+                        {
+                            "query": query,
+                            "response": response,
+                        }
+                    )
+        else:
+            return self.execute_query(query, state)
 
     def _plan(self, query: str) -> Optional[List[str]]:
         prompt = (
@@ -49,7 +71,7 @@ class DomainAgent(object):
         steps = [line.strip() for line in response.text.split("\n") if line.strip()]
         return steps
 
-    def execute_query(self, query: str, chat_history: Optional[List[Dict]] = None):
+    def execute_query(self, query: str, state: State, chat_history: Optional[List[Dict]] = None):
         history_prompt = ""
         if chat_history:
             history_prompt += "Previous steps and their outputs:\n"
@@ -69,13 +91,23 @@ class DomainAgent(object):
 
         self.logger.debug(f"Agent wants to execute '{function_name}'.")
 
-        function_to_call = self.tool_functions.get(function_name)
+        function_to_call = self._find_function(function_name)
         if not function_to_call:
             raise ValueError(f"Unknown tool call: {function_name}")
 
         args = {key: value for key, value in function_call.args.items()}
-        function_response_data = function_to_call(**args)
+        if function_to_call.state_enabled:
+            args['state'] = state
+            function_response_data, state = function_to_call.callable(**args)
+        else:
+            function_response_data = function_to_call.callable(**args)
 
         self.logger.debug(f"Tool executed. Result: {function_response_data}")
 
-        return function_response_data
+        return function_response_data, state
+
+    def _find_function(self, name):
+        for func in self.tool_functions:
+            if func.name == name:
+                return func
+        return None
