@@ -2,7 +2,7 @@ import dataclasses
 import logging
 from typing import Dict, Callable, Optional, List
 
-from droidflow.model import State
+from src.droidflow.model import State
 
 @dataclasses.dataclass
 class ToolFunction:

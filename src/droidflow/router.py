@@ -1,6 +1,6 @@
 import logging
-from droidflow.domain import DomainAgent
-from droidflow.model import History, State, RequestAndReply
+from src.droidflow.domain import DomainAgent
+from src.droidflow.model import History, State, RequestAndReply
 
 class RouterAgent:
     def __init__(self, llm, agents: list[DomainAgent], history_enabled: bool = False, debug: bool = False):
