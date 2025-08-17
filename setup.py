@@ -9,16 +9,13 @@ setup(
     author="Kaan Simsek",
     author_email="kaan.simsek01@gmail.com",
     url="https://github.com/KaanSimsek/droidflow",
-    package_dir={"": "src"},  # Önemli: paketleri src içinden bulacak
-    packages=find_packages(where="src", exclude=["tests*"]),
-    install_requires=[
-        "google-generativeai>=0.5.0",
-    ],
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    install_requires=["google-generativeai>=0.5.0"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.7",
-    include_package_data=True,
 )
