@@ -1,6 +1,7 @@
 import logging
 from .domain import DomainAgent
-from .model import History, State, RequestAndReply
+from .model import History, State, RequestAndReply, SkipStep
+
 
 class RouterAgent:
     def __init__(self, llm, agents: list[DomainAgent], route_prompt: str, final_answer_prompt: str, history_enabled: bool = False, debug: bool = False):
@@ -74,6 +75,8 @@ class RouterAgent:
 
             if agent_to_run:
                 result, self.state = agent_to_run(step + ". Chat history:\n" + "\n".join(map(str, self.history.history)), self.state)
+                if isinstance(result, SkipStep):
+                    return
                 self.history.append(RequestAndReply(step, result))
             else:
                 error_msg = f"Error: Agent '{tool_call.name}' not found."
