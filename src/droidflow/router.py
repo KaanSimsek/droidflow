@@ -3,7 +3,7 @@ from .domain import DomainAgent
 from .model import History, State, RequestAndReply
 
 class RouterAgent:
-    def __init__(self, llm, agents: list[DomainAgent], history_enabled: bool = False, debug: bool = False):
+    def __init__(self, llm, agents: list[DomainAgent], route_prompt: str, final_answer_prompt: str, history_enabled: bool = False, debug: bool = False):
         self.llm = llm
         self.agents = None
         self.set_agents(agents)
@@ -11,6 +11,9 @@ class RouterAgent:
         self.history_enabled = history_enabled
         if history_enabled:
             self.history = History()
+
+        self.route_prompt = route_prompt
+        self.final_answer_prompt = final_answer_prompt
 
         self.debug = debug
         self.logger = logging.getLogger(__name__)
@@ -39,7 +42,7 @@ class RouterAgent:
             for i, h in enumerate(self.history.history)
         )
 
-        prompt = f"Generate final response by using this information:\n{history_text}"
+        prompt = f"{self.final_answer_prompt}:\n{history_text}"
         resp = self.llm.generate_content(prompt)
 
         final_text = ""
@@ -58,8 +61,7 @@ class RouterAgent:
         history_prompt = self._set_history_prompt()
         prompt = (
             f"{history_prompt}\n"
-            f"Task: '{step}'. Generate only the appropriate agent's function_call to complete this task. "
-            "Do not return any explanation or additional text. Only produce the function_call."
+            f"Task: '{step}'. {self.route_prompt}\n"
         )
 
         response = self.llm.generate_content(prompt)

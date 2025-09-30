@@ -18,3 +18,6 @@ class State(object):
         self.state = dict()
     def append(self, key: str, value: Any) -> None:
         self.state[key] = value
+
+class SkipStep:
+    pass

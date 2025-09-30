@@ -2,7 +2,8 @@ import dataclasses
 import logging
 from typing import Dict, Callable, Optional, List
 
-from .model import State
+from .model import State, SkipStep
+
 
 @dataclasses.dataclass
 class ToolFunction:
@@ -25,6 +26,9 @@ class DomainAgent(object):
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG if debug else logging.INFO)
+
+        self.last_function_name: Optional[str] = None
+        self.last_function_args: Optional[dict] = None
 
     def execute(self, query: str, state: State):
         if self.mode:
@@ -93,9 +97,14 @@ class DomainAgent(object):
 
         function_to_call = self._find_function(function_name)
         if not function_to_call:
-            raise ValueError(f"Unknown tool call: {function_name}")
+            self.logger.debug(f"Skipping because '{function_name}' can not be found at {self.name} agents tool box.")
+            return SkipStep(), state
 
         args = {key: value for key, value in function_call.args.items()}
+        if self.should_skip(function_name, args):
+            self.logger.debug(f"Skipping '{function_name}'.")
+            return SkipStep(), state
+
         if function_to_call.state_enabled:
             args['state'] = state
             function_response_data, state = function_to_call.callable(**args)
@@ -103,8 +112,19 @@ class DomainAgent(object):
             function_response_data = function_to_call.callable(**args)
 
         self.logger.debug(f"Tool executed. Result: {function_response_data}")
+        self.last_function_name = function_name
+        self.last_function_args = args
 
         return function_response_data, state
+
+    def should_skip(self, func_name: str, args: dict) -> bool:
+        if self.last_function_name is None:
+            return False
+
+        return (
+                func_name == self.last_function_name
+                and args == self.last_function_args
+        )
 
     def _find_function(self, name):
         for func in self.tool_functions:
