@@ -34,11 +34,16 @@ class DomainAgent(object):
         if self.mode:
             sub_plans = self._plan(query)
             if sub_plans is None:
-                return self.execute_query(query, state)
+                response, state =  self.execute_query(query, state)
+                if response == SkipStep:
+                    response = self._fallback_response(query)
+                return response
             else:
                 chat_history = []
                 for sub_plan in sub_plans:
                     response, state = self.execute_query(sub_plan, state, chat_history)
+                    if response == SkipStep:
+                        response = self._fallback_response(query)
                     chat_history.append(
                         {
                             "query": query,
@@ -131,3 +136,16 @@ class DomainAgent(object):
             if func.name == name:
                 return func
         return None
+
+    def _fallback_response(self, step: str) -> str:
+        fallback_prompt = (
+            f"You are a financial analysis assistant.\n"
+            f"The system could not find a specific tool for this task:\n"
+            f"'{step}'.\n"
+            f"Based on your own financial knowledge, "
+            f"please try to provide the best possible answer.\n\n"
+            f"Your response:"
+        )
+
+        fallback_response = self.llm.generate_content(fallback_prompt)
+        return fallback_response.candidates[0].content.parts[0].text.strip()
