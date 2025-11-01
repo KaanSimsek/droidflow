@@ -80,12 +80,11 @@ class RouterAgent:
                 self.history.append(RequestAndReply(step, result))
             else:
                 error_msg = f"Error: Agent '{tool_call.name}' not found."
-                self.history.append(RequestAndReply(step, error_msg))
                 self.logger.warning(error_msg)
+                self._fallback_response(step)
         else:
-            error_msg = "Error: No tool was selected."
-            self.history.append(RequestAndReply(step, error_msg))
-            self.logger.warning(error_msg)
+            self.logger.warning("No tool was selected — falling back to direct LLM reasoning.")
+            self._fallback_response(step)
 
     def _set_history_prompt(self):
         history_prompt = ""
@@ -96,4 +95,19 @@ class RouterAgent:
                 history_prompt += f"  → Output: {prev.response}\n"
         return history_prompt
 
+    def _fallback_response(self, step: str):
+        fallback_prompt = (
+            f"You are a financial analysis assistant.\n"
+            f"The system could not find a specific tool for this task:\n"
+            f"'{step}'.\n"
+            f"Based on your own financial knowledge and the chat history below, "
+            f"please try to provide the best possible answer.\n\n"
+            f"Chat history:\n{self._set_history_prompt()}\n\n"
+            f"Your response:"
+        )
 
+        fallback_response = self.llm.generate_content(fallback_prompt)
+        fallback_text = fallback_response.candidates[0].content.parts[0].text.strip()
+
+        self.history.append(RequestAndReply(step, fallback_text))
+        self.logger.info("Fallback LLM response appended to history.")
