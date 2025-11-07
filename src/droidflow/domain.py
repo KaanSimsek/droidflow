@@ -123,7 +123,7 @@ class DomainAgent(object):
 
             return function_response_data, state
         except Exception as e:
-            self.logger.error(f"Failed to execute '{function_name}'.")
+            self.logger.error(f"Failed to execute step '{query}'.")
             return "can not find answer for this step", state
 
     def should_skip(self, func_name: str, args: dict) -> bool:
