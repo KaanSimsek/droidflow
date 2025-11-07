@@ -81,46 +81,50 @@ class DomainAgent(object):
         return steps
 
     def execute_query(self, query: str, state: State, chat_history: Optional[List[Dict]] = None):
-        history_prompt = ""
-        if chat_history:
-            history_prompt += "Previous steps and their outputs:\n"
-            for prev_id, (prev_step, prev_response) in enumerate(chat_history):
-                history_prompt += f"- Step {prev_id}: {prev_step}\n"
-                history_prompt += f"  → Output: {prev_response}\n"
+        try:
+            history_prompt = ""
+            if chat_history:
+                history_prompt += "Previous steps and their outputs:\n"
+                for prev_id, (prev_step, prev_response) in enumerate(chat_history):
+                    history_prompt += f"- Step {prev_id}: {prev_step}\n"
+                    history_prompt += f"  → Output: {prev_response}\n"
 
-        prompt = (
-            f"{history_prompt}\n"
-            f"Task: '{query}'. Generate only the appropriate function_call to complete this task. "
-            "Do not return any explanation or other text. Only produce a function_call."
-        )
+            prompt = (
+                f"{history_prompt}\n"
+                f"Task: '{query}'. Generate only the appropriate function_call to complete this task. "
+                "Do not return any explanation or other text. Only produce a function_call."
+            )
 
-        response = self.llm.generate_content(prompt)
-        function_call = response.candidates[0].content.parts[0].function_call
-        function_name = function_call.name
+            response = self.llm.generate_content(prompt)
+            function_call = response.candidates[0].content.parts[0].function_call
+            function_name = function_call.name
 
-        self.logger.debug(f"Agent wants to execute '{function_name}'.")
+            self.logger.debug(f"Agent wants to execute '{function_name}'.")
 
-        function_to_call = self._find_function(function_name)
-        if not function_to_call:
-            self.logger.debug(f"Skipping because '{function_name}' can not be found at {self.name} agents tool box.")
-            return SkipStep(), state
+            function_to_call = self._find_function(function_name)
+            if not function_to_call:
+                self.logger.debug(f"Skipping because '{function_name}' can not be found at {self.name} agents tool box.")
+                return SkipStep(), state
 
-        args = {key: value for key, value in function_call.args.items()}
-        if self.should_skip(function_name, args):
-            self.logger.debug(f"Skipping '{function_name}'.")
-            return SkipStep(), state
+            args = {key: value for key, value in function_call.args.items()}
+            if self.should_skip(function_name, args):
+                self.logger.debug(f"Skipping '{function_name}'.")
+                return SkipStep(), state
 
-        if function_to_call.state_enabled:
-            args['state'] = state
-            function_response_data, state = function_to_call.callable(**args)
-        else:
-            function_response_data = function_to_call.callable(**args)
+            if function_to_call.state_enabled:
+                args['state'] = state
+                function_response_data, state = function_to_call.callable(**args)
+            else:
+                function_response_data = function_to_call.callable(**args)
 
-        self.logger.debug(f"Tool executed. Result: {function_response_data}")
-        self.last_function_name = function_name
-        self.last_function_args = args
+            self.logger.debug(f"Tool executed. Result: {function_response_data}")
+            self.last_function_name = function_name
+            self.last_function_args = args
 
-        return function_response_data, state
+            return function_response_data, state
+        except Exception as e:
+            self.logger.error(f"Failed to execute '{function_name}'.")
+            return "can not find answer for this step", state
 
     def should_skip(self, func_name: str, args: dict) -> bool:
         if self.last_function_name is None:
