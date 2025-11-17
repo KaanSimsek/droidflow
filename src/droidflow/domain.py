@@ -37,9 +37,10 @@ class DomainAgent(object):
                 response, state =  self.execute_query(query, state)
                 if response == SkipStep:
                     response = self._fallback_response(query)
-                return response
+                return response, state
             else:
                 chat_history = []
+                response = ""
                 for sub_plan in sub_plans:
                     response, state = self.execute_query(sub_plan, state, chat_history)
                     if response == SkipStep:
@@ -50,6 +51,7 @@ class DomainAgent(object):
                             "response": response,
                         }
                     )
+                return response, state
         else:
             return self.execute_query(query, state)
 
