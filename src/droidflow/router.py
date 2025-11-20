@@ -77,6 +77,9 @@ class RouterAgent:
                 result, self.state = agent_to_run(step + ". Chat history:\n" + "\n".join(map(str, self.history.history)), self.state)
                 if isinstance(result, SkipStep):
                     return
+                if result == "can not find answer for this step":
+                    self._fallback_response(step)
+                    return
                 self.history.append(RequestAndReply(step, result))
             else:
                 error_msg = f"Error: Agent '{tool_call.name}' not found."
